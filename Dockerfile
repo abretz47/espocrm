@@ -36,6 +36,7 @@ RUN for i in 1 2 3; do apk update && break || sleep 5; done \
         nginx \
         git \
         unzip \
+        libpq \
         libpng-dev \
         libjpeg-turbo-dev \
         freetype-dev \
@@ -43,6 +44,7 @@ RUN for i in 1 2 3; do apk update && break || sleep 5; done \
         libxml2-dev \
         curl-dev \
         oniguruma-dev \
+        postgresql-dev \
         gettext-dev \
         icu-dev \
     && apk add --virtual ".phpize-deps-configure-${PHPIZE_HASH}" $PHPIZE_DEPS \
@@ -65,7 +67,7 @@ RUN for i in 1 2 3; do apk update && break || sleep 5; done \
     && apk del \
         libpng-dev libjpeg-turbo-dev freetype-dev \
         libzip-dev libxml2-dev curl-dev oniguruma-dev \
-        gettext-dev icu-dev \
+        postgresql-dev gettext-dev icu-dev \
     && rm -rf /var/cache/apk/*
 
 # Install Composer.
