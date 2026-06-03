@@ -1,0 +1,16 @@
+.git
+.github
+.idea
+.vscode
+node_modules
+build
+data/logs
+data/cache
+data/upload
+data/tmp
+data/config.php
+data/config-internal.php
+data/config-override.php
+data/config-internal-override.php
+tests
+*.md

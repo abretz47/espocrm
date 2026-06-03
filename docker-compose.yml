@@ -1,0 +1,63 @@
+services:
+
+  # ── EspoCRM application ──────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: espocrm_app
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      # These are read during the web-based installer.
+      # Change them to match the values you enter in the installer wizard.
+      ESPO_SITE_URL: "http://localhost:8080"
+    volumes:
+      # Persist uploaded files, logs, and generated cache between restarts.
+      - espocrm_data:/var/www/html/data
+      # Mount local source for live backend edits (optional — comment out for a
+      # pure-image workflow).
+      # - .:/var/www/html
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ── MySQL 8 database ─────────────────────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: espocrm_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: espocrm
+      MYSQL_USER: espocrm
+      MYSQL_PASSWORD: espocrm_password
+    volumes:
+      - espocrm_mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "espocrm", "-pespocrm_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ── Cron worker (scheduled jobs) ─────────────────────────────────────────────
+  cron:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: espocrm_cron
+    restart: unless-stopped
+    # Override the entrypoint: run only the cron loop, no web server.
+    entrypoint: ["/bin/sh", "-c", "while true; do php /var/www/html/cron.php; sleep 60; done"]
+    environment:
+      ESPO_SITE_URL: "http://localhost:8080"
+    volumes:
+      - espocrm_data:/var/www/html/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  espocrm_data:
+  espocrm_mysql:
