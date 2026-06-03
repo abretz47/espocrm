@@ -7,8 +7,8 @@ WORKDIR /build
 # so Docker can cache this layer when source files are unchanged.
 COPY package.json package-lock.json ./
 RUN PUPPETEER_SKIP_DOWNLOAD=1 CHROMEDRIVER_SKIP_DOWNLOAD=true \
-    npm ci --omit=optional --ignore-scripts 2>/dev/null || \
-    npm install --omit=optional --ignore-scripts
+    npm ci --ignore-scripts 2>/dev/null || \
+    npm install --ignore-scripts
 
 # Copy the rest of the source and build the frontend bundle.
 COPY . .
