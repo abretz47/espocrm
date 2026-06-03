@@ -3,12 +3,15 @@ FROM node:20-alpine AS frontend-builder
 
 WORKDIR /build
 
+# Needed for git-based npm dependencies.
+RUN apk add --no-cache git
+
 # Install only the files needed to resolve npm dependencies first,
 # so Docker can cache this layer when source files are unchanged.
 COPY package.json package-lock.json ./
 RUN PUPPETEER_SKIP_DOWNLOAD=1 CHROMEDRIVER_SKIP_DOWNLOAD=true \
-    npm ci --omit=optional 2>/dev/null || \
-    npm install --omit=optional
+    npm ci --omit=optional --ignore-scripts 2>/dev/null || \
+    npm install --omit=optional --ignore-scripts
 
 # Copy the rest of the source and build the frontend bundle.
 COPY . .
