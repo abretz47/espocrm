@@ -3,9 +3,6 @@ FROM node:20-alpine AS frontend-builder
 
 WORKDIR /build
 
-# Needed for git-based npm dependencies.
-RUN apk add --no-cache git
-
 # Install only the files needed to resolve npm dependencies first,
 # so Docker can cache this layer when source files are unchanged.
 COPY package.json package-lock.json ./
