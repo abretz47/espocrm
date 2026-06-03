@@ -19,19 +19,33 @@ RUN npm run build-frontend
 FROM php:8.3-fpm-alpine
 
 # Install system packages required by PHP extensions and nginx.
-RUN apk add --no-cache \
-    nginx \
-    git \
-    unzip \
-    libpng-dev \
-    libjpeg-turbo-dev \
-    freetype-dev \
-    libzip-dev \
-    libxml2-dev \
-    curl-dev \
-    oniguruma-dev \
-    gettext-dev \
-    icu-dev \
+#
+# Strategy to avoid multiple apk network calls (which hit transient DNS failures):
+# 1. Run `apk update` once (with retries) to cache the package index locally.
+# 2. Install all packages without --no-cache so the cached index is reused.
+# 3. Pre-create the exact virtual-group name that docker-php-ext-configure /
+#    docker-php-ext-install would create themselves (based on phpize's version
+#    hash). Those scripts check for the group with `apk info --installed` first;
+#    finding it already present, they skip their own `apk add --no-cache`, which
+#    is the call that causes the second DNS lookup and intermittent failures.
+# 4. docker-php-ext-install removes the virtual group during its own cleanup, so
+#    we only need to remove the -dev header packages ourselves.
+RUN for i in 1 2 3; do apk update && break || sleep 5; done \
+    && PHPIZE_HASH="$(phpize --version | sha1sum | cut -c1-8)" \
+    && apk add \
+        nginx \
+        git \
+        unzip \
+        libpng-dev \
+        libjpeg-turbo-dev \
+        freetype-dev \
+        libzip-dev \
+        libxml2-dev \
+        curl-dev \
+        oniguruma-dev \
+        gettext-dev \
+        icu-dev \
+    && apk add --virtual ".phpize-deps-configure-${PHPIZE_HASH}" $PHPIZE_DEPS \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
         pdo \
@@ -48,9 +62,11 @@ RUN apk add --no-cache \
         ctype \
         openssl \
         intl \
-    && apk del --no-cache libpng-dev libjpeg-turbo-dev freetype-dev \
-                           libzip-dev libxml2-dev curl-dev oniguruma-dev \
-                           gettext-dev icu-dev
+    && apk del \
+        libpng-dev libjpeg-turbo-dev freetype-dev \
+        libzip-dev libxml2-dev curl-dev oniguruma-dev \
+        gettext-dev icu-dev \
+    && rm -rf /var/cache/apk/*
 
 # Install Composer.
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
