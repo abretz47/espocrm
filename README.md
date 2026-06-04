@@ -59,6 +59,78 @@ See installation instructions:
 * [Installation with Docker](https://docs.espocrm.com/administration/docker/installation/)
 * [Installation with Traefik](https://docs.espocrm.com/administration/docker/traefik/)
 
+### Local Development with Docker
+
+The repository ships with a `Dockerfile` and a `docker-compose.yml` that build
+EspoCRM directly from source and wire it up with a MySQL 8 database.
+
+#### Prerequisites
+
+* [Docker](https://docs.docker.com/get-docker/) 24+
+* [Docker Compose](https://docs.docker.com/compose/install/) v2+
+
+#### 1. Build and start the stack
+
+```bash
+docker compose up --build -d
+```
+
+This will:
+
+1. Compile the frontend bundle inside a Node 20 build container.
+2. Install PHP Composer dependencies.
+3. Start three services: **app** (nginx + PHP-FPM on port 8080), **db** (MySQL 8), and **cron** (scheduled-job worker).
+
+> **First build takes a few minutes** because npm and Composer download all dependencies.
+> Subsequent builds reuse Docker layer caches and are much faster.
+
+#### 2. Complete the web installer
+
+Open <http://localhost:8080> in your browser. You will be redirected to the
+EspoCRM installation wizard. Use the following database details when prompted:
+
+| Field             | Value              |
+|-------------------|--------------------|
+| **DB Host**       | `db`               |
+| **DB Name**       | `espocrm`          |
+| **DB User**       | `espocrm`          |
+| **DB Password**   | `espocrm_password` |
+
+Set the **Site URL** to `http://localhost:8080`. Create an admin user when asked,
+then finish the wizard.
+
+#### 3. Working with the running stack
+
+```bash
+# Tail application logs
+docker compose logs -f app
+
+# Run a PHP CLI command (e.g. clear cache)
+docker compose exec app php /var/www/html/clear_cache.php
+
+# Rebuild the frontend only (after editing client/ sources)
+docker compose exec app npm run build-frontend
+
+# Stop everything (data is preserved in Docker volumes)
+docker compose down
+
+# Destroy containers and volumes (full reset)
+docker compose down -v
+```
+
+#### Customising credentials
+
+Edit the `environment` section in `docker-compose.yml` before the first
+`docker compose up`. The relevant variables are:
+
+| Variable                   | Service | Purpose                          |
+|----------------------------|---------|----------------------------------|
+| `ESPO_SITE_URL`            | app     | Public URL shown to the browser  |
+| `MYSQL_DATABASE`           | db      | Database name                    |
+| `MYSQL_USER`               | db      | Database user                    |
+| `MYSQL_PASSWORD`           | db      | Database password                |
+| `MYSQL_ROOT_PASSWORD`      | db      | MySQL root password              |
+
 ### Bug reporting
 
 Create a [GitHub issue](https://github.com/espocrm/espocrm/issues/new/choose) or post on our [forum](https://forum.espocrm.com/forum/bug-reports).

@@ -345,6 +345,8 @@ export default class BaseFieldView<
 
     private _isInlineEditMode: boolean = false
 
+    private inlineEditButtonMouseDown: boolean = false
+
     /**
      * @internal
      */
@@ -1340,6 +1342,9 @@ export default class BaseFieldView<
 
         $cell.find('.inline-edit-link').addClass('hidden');
 
+        saveLink.addEventListener('mousedown', () => this.inlineEditButtonMouseDown = true);
+        cancelLink.addEventListener('mousedown', () => this.inlineEditButtonMouseDown = true);
+
         saveLink.onclick = () => this.inlineEditSave();
         cancelLink.onclick = () => this.inlineEditClose();
     }
@@ -1364,8 +1369,10 @@ export default class BaseFieldView<
         }
 
         this.$el.off('keydown.inline-edit');
+        this.$el.off('focusout.inline-edit-auto-save');
 
         this._isInlineEditMode = false;
+        this.inlineEditButtonMouseDown = false;
 
         if (!this.isEditMode()) {
             return Promise.resolve();
@@ -1454,6 +1461,27 @@ export default class BaseFieldView<
                 this.fetchToModel();
                 this.inlineEditSave({bypassClose: true});
             }
+        });
+
+        this.$el.on('focusout.inline-edit-auto-save', () => {
+            setTimeout(() => {
+                if (!this._isInlineEditMode) {
+                    return;
+                }
+
+                if (this.inlineEditButtonMouseDown) {
+                    this.inlineEditButtonMouseDown = false;
+
+                    return;
+                }
+
+                if (this.element?.contains(document.activeElement)) {
+                    return;
+                }
+
+                this.fetchToModel();
+                this.inlineEditSave();
+            }, 150);
         });
 
         setTimeout(() => this.focusOnInlineEdit(), 10);
