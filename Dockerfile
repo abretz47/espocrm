@@ -20,15 +20,16 @@ FROM php:8.3-fpm-alpine
 
 # Install system packages required by PHP extensions and nginx.
 RUN set -eux; \
-    apk add --no-cache \
+    for i in 1 2 3; do apk update && break || sleep 5; done; \
+    apk add \
         nginx \
         git \
         unzip \
     ; \
-    apk add --no-cache --virtual .phpize-deps \
+    apk add --virtual .phpize-deps \
         $PHPIZE_DEPS \
     ; \
-    apk add --no-cache --virtual .build-deps \
+    apk add --virtual .build-deps \
         libpng-dev \
         libjpeg-turbo-dev \
         freetype-dev \
@@ -63,8 +64,9 @@ RUN set -eux; \
             | sort -u \
             | awk 'system("[ -e /usr/local/lib/" $1 " ]") == 0 { next } { print "so:" $1 }' \
     )"; \
-    apk add --no-cache --virtual .espocrm-phpexts-rundeps $runDeps; \
-    apk del --no-network .build-deps .phpize-deps
+    apk add --virtual .espocrm-phpexts-rundeps $runDeps; \
+    apk del --no-network .build-deps .phpize-deps; \
+    rm -rf /var/cache/apk/*
 
 # Install Composer.
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
