@@ -6,9 +6,16 @@ WORKDIR /build
 # Install only the files needed to resolve npm dependencies first,
 # so Docker can cache this layer when source files are unchanged.
 COPY package.json package-lock.json ./
-RUN PUPPETEER_SKIP_DOWNLOAD=1 CHROMEDRIVER_SKIP_DOWNLOAD=true \
-    npm ci --include=dev --ignore-scripts 2>/dev/null || \
-    npm install --include=dev --ignore-scripts
+RUN set -eux; \
+    export PUPPETEER_SKIP_DOWNLOAD=1 CHROMEDRIVER_SKIP_DOWNLOAD=true; \
+    export npm_config_fetch_retries=5 npm_config_fetch_retry_factor=2; \
+    export npm_config_fetch_retry_mintimeout=10000 npm_config_fetch_retry_maxtimeout=120000; \
+    for i in 1 2 3; do \
+        if npm ci --include=dev --ignore-scripts 2>/dev/null; then break; fi; \
+        if npm install --include=dev --ignore-scripts; then break; fi; \
+        [ "$i" -eq 3 ] && exit 1; \
+        sleep $((i * 10)); \
+    done
 
 # Copy the rest of the source and build the frontend bundle.
 COPY . .
